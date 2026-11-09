@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JD 看板 · 招聘数据</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2129; --line:#262d38;
+    --txt:#e6edf3; --muted:#8b949e; --accent:#4cc38a; --accent-2:#58a6ff;
+    --warn:#d29922; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:14px/1.55 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1460px;margin:0 auto;padding:24px 20px 64px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  h1{margin:0;font-size:22px;letter-spacing:.3px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  button, .btn{
+    background:var(--panel-2);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:8px 12px;font-size:13px;cursor:pointer;transition:.15s;
+  }
+  button:hover,.btn:hover{border-color:#3c4654;background:#222936}
+  button.primary{background:var(--accent);color:#06231a;border-color:transparent;font-weight:600}
+  button.primary:hover{filter:brightness(1.06)}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--panel)
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+  .dot.live{background:var(--accent)}
+  .dot.demo{background:var(--accent-2)}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .kpi .k{color:var(--muted);font-size:12px}
+  .kpi .v{font-size:26px;font-weight:650;margin-top:6px;letter-spacing:.5px}
+  .kpi .v small{font-size:13px;color:var(--muted);font-weight:400;margin-left:4px}
+
+  .charts{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-bottom:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .card h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.4px}
+  .bar-row{display:grid;grid-template-columns:72px 1fr 36px;align-items:center;gap:10px;margin:7px 0}
+  .bar-label{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .bar-track{height:8px;background:#11161d;border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#2f81f7,#4cc38a);transition:width .4s}
+  .bar-num{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .filters{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:14px;
+  }
+  .filters input[type=search], .filters select{
+    background:#0f141b;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:8px 10px;font-size:13px;outline:none;min-width:120px;
+  }
+  .filters input[type=search]{flex:1;min-width:220px}
+  .filters input:focus,.filters select:focus{border-color:#3d7eff66;box-shadow:0 0 0 3px #3d7eff1f}
+  .range-wrap{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+  input[type=range]{accent-color:var(--accent);width:120px}
+
+  .table-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .table-scroll{overflow:auto;max-height:calc(100vh - 360px)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{
+    position:sticky;top:0;background:#131820;text-align:left;color:var(--muted);
+    font-weight:600;font-size:12px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;
+  }
+  thead th:hover{color:var(--txt)}
+  thead th .arrow{opacity:.45;font-size:10px;margin-left:3px}
+  tbody td{padding:10px 12px;border-bottom:1px solid #1d232c;vertical-align:top}
+  tbody tr{cursor:pointer;transition:background .12s}
+  tbody tr:hover{background:#1a212b}
+  tbody tr.active{background:#1e2937}
+  .job-title{font-weight:600;color:#dbe7f3}
+  .salary{color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+  .muted{color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:#1f2733;color:#9fb0c3;margin:1px 4px 1px 0}
+  .empty{padding:56px 20px;text-align:center;color:var(--muted)}
+  .empty b{color:var(--txt);display:block;margin-bottom:8px;font-size:15px}
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .pager .pg{display:flex;gap:6px}
+
+  .drawer{
+    position:fixed;top:0;right:0;height:100%;width:min(520px,92vw);
+    background:var(--panel);border-left:1px solid var(--line);
+    transform:translateX(102%);transition:transform .25s ease;z-index:40;
+    display:flex;flex-direction:column;
+  }
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .drawer-body{padding:16px 18px;overflow:auto;flex:1}
+  .kv{display:grid;grid-template-columns:86px 1fr;gap:6px 12px;font-size:13px;margin-bottom:16px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;word-break:break-word}
+  pre.raw{background:#0f141b;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;overflow:auto;max-height:320px;color:#a5d6ff}
+  .close{background:none;border:none;font-size:20px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 6px}
+  .close:hover{color:var(--txt)}
+
+  #drop{
+    position:fixed;inset:0;background:#0d1117e6;border:2px dashed var(--accent);
+    display:none;align-items:center;justify-content:center;font-size:18px;z-index:60;
+  }
+  #drop.on{display:flex}
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
+    background:#1f2733;border:1px solid var(--line);color:var(--txt);
+    padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:70;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .runbar{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:14px;
+  }
+  .run-fields{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .run-fields select,.run-fields input{
+    background:#0f141b;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:8px 10px;font-size:13px;outline:none;
+  }
+  .run-fields input#rKeyword{min-width:160px}
+  .run-fields input#rPages{width:64px}
+  .run-hint{color:var(--muted);font-size:12px;margin-left:auto}
+  .run-state{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .run-state.on{color:var(--warn);border-color:#4a3c17}
+  .run-state.ok{color:var(--accent);border-color:#1f4a37}
+  pre.runlog{
+    margin:12px 0 0;background:#0b0f14;border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;max-height:200px;overflow:auto;font-size:12px;line-height:1.5;
+    color:#a9b8c9;white-space:pre-wrap;word-break:break-all;
+  }
+  @media (max-width:980px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .charts{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>JD <span>看板</span></h1>
+      <div class="sub">招聘网站职位描述采集结果 · 采集层 Scrapling，展示层纯前端</div>
+    </div>
+    <div class="actions">
+      <span class="badge" id="sourceBadge"><span class="dot" id="sourceDot"></span><span id="sourceText">加载中…</span></span>
+      <button id="btnReload">重新加载</button>
+      <button id="btnImport">导入 JSON / CSV</button>
+      <button class="primary" id="btnExport">导出当前筛选</button>
+    </div>
+  </header>
+
+  <section class="runbar">
+    <div class="run-fields">
+      <select id="rSite">
+        <option value="boss">BOSS直聘</option>
+        <option value="liepin">猎聘</option>
+        <option value="51job">前程无忧</option>
+        <option value="zhilian">智联招聘</option>
+      </select>
+      <input id="rKeyword" value="python" placeholder="关键词，如 python / 算法 / 数据分析" />
+      <select id="rCity">
+        <option>北京</option><option>上海</option><option>深圳</option><option>杭州</option>
+        <option>广州</option><option>成都</option><option>南京</option><option>武汉</option>
+        <option>西安</option><option>全国</option>
+      </select>
+      <input id="rPages" type="number" min="1" max="20" value="3" />
+      <span class="muted" style="font-size:12px">页</span>
+      <button class="primary" id="btnRun">开始采集</button>
+      <span class="run-state" id="runState">空闲</span>
+      <span class="run-hint">首次采集该站前，先在终端跑 <code>python jobscraper.py login &lt;site&gt;</code> 登录一次</span>
+    </div>
+    <pre class="runlog" id="runLog" hidden></pre>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi"><div class="k">职位总数</div><div class="v" id="kpiJobs">—</div></div>
+    <div class="kpi"><div class="k">公司数</div><div class="v" id="kpiComps">—</div></div>
+    <div class="kpi"><div class="k">覆盖城市</div><div class="v" id="kpiCities">—</div></div>
+    <div class="kpi"><div class="k">薪资中位</div><div class="v" id="kpiSalary">—<small>K/月</small></div></div>
+  </section>
+
+  <section class="charts">
+    <div class="card">
+      <h2>薪资区间分布（月薪下限）</h2>
+      <div id="chartSalary"></div>
+    </div>
+    <div class="card">
+      <h2>城市 Top 8</h2>
+      <div id="chartCity"></div>
+    </div>
+  </section>
+
+  <section class="filters">
+    <input type="search" id="q" placeholder="搜职位 / 公司 / 技能，例如 python、算法、字节" />
+    <select id="fCity"><option value="">全部城市</option></select>
+    <select id="fSite"><option value="">全部来源</option></select>
+    <select id="fExp"><option value="">全部经验</option></select>
+    <div class="range-wrap">
+      <span>月薪下限 ≥</span>
+      <input type="range" id="fSalary" min="0" max="60" step="5" value="0" />
+      <b id="fSalaryVal" style="color:var(--txt);min-width:44px">0K</b>
+    </div>
+    <button id="btnReset">重置</button>
+  </section>
+
+  <section class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="title">职位 <span class="arrow">↕</span></th>
+            <th data-key="company">公司 <span class="arrow">↕</span></th>
+            <th data-key="city">城市 <span class="arrow">↕</span></th>
+            <th data-key="salary_min">薪资 <span class="arrow">↕</span></th>
+            <th data-key="experience">经验 / 学历 <span class="arrow">↕</span></th>
+            <th data-key="skills">技能</th>
+            <th data-key="site">来源</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden></div>
+    </div>
+    <div class="pager">
+      <span id="pagerInfo">—</span>
+      <div class="pg">
+        <button id="prev">上一页</button>
+        <button id="next">下一页</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="job-title" id="dTitle" style="font-size:17px">—</div>
+      <div class="muted" id="dCompany" style="margin-top:4px">—</div>
+    </div>
+    <button class="close" id="dClose">×</button>
+  </div>
+  <div class="drawer-body">
+    <dl class="kv" id="dKv"></dl>
+    <h2 style="font-size:13px;color:var(--muted);margin:0 0 8px">原始记录</h2>
+    <pre class="raw" id="dRaw"></pre>
+  </div>
+</aside>
+
+<div id="drop">松手导入 jobs.json / jobs.csv</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="file" accept=".json,.csv" hidden />
+
+<script>
+/* ------------------------------------------------------------------ *
+ * 数据来源优先级： /api/jobs（serve.py） → jobs.json → 内置示例
+ * ------------------------------------------------------------------ */
+const FIELDS = ["site","job_id","title","company","city","district","salary_raw",
+                "salary_min","salary_max","salary_months","experience","education",
+                "skills","url","published_at","fetched_at"];
+
+const state = {
+  rows: [], view: [], source: "demo",
+  q: "", city: "", site: "", exp: "", minSalary: 0,
+  sortKey: "salary_min", sortDir: -1,
+  page: 1, pageSize: 50, activeId: null,
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = (v) => (v === null || v === undefined || v === "" || isNaN(Number(v))) ? null : Number(v);
+
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+/* ---------------------------- 示例数据 ---------------------------- */
+const DEMO_TITLES = ["Python 后端工程师","算法工程师（推荐）","数据分析师","前端工程师","Go 服务端开发",
+  "爬虫工程师","大模型应用开发","测试开发工程师","Java 架构师","数据仓库工程师"];
+const DEMO_COMPS = ["字节跳动","美团","小红书","拼多多","网易","快手","蚂蚁集团","携程","B 站","京东"];
+const DEMO_CITIES = ["北京","上海","深圳","杭州","广州","成都"];
+const DEMO_EXPS = ["应届","1-3 年","3-5 年","5-10 年"];
+
+function demoRows(){
+  const rows = [];
+  for (let i = 0; i < 46; i++){
+    const lo = 10 + (i * 7) % 40;
+    const hi = lo + 6 + (i % 12);
+    const t = DEMO_TITLES[i % DEMO_TITLES.length];
+    rows.push({
+      site: ["boss","liepin","51job"][i % 3],
+      job_id: "demo" + i,
+      title: t,
+      company: DEMO_COMPS[i % DEMO_COMPS.length],
+      city: DEMO_CITIES[i % DEMO_CITIES.length],
+      district: ["海淀区","朝阳区","南山区","西湖区","天河区","高新区"][i % 6],
+      salary_raw: lo + "-" + hi + "K" + (i % 4 === 0 ? "·14薪" : ""),
+      salary_min: lo, salary_max: hi, salary_months: i % 4 === 0 ? 14 : null,
+      experience: DEMO_EXPS[i % DEMO_EXPS.length],
+      education: i % 3 === 0 ? "本科" : "硕士",
+      skills: ["Python","SQL","分布式","Docker","Redis"].filter((_, k) => (i + k) % 3 !== 0).join(";"),
+      url: "https://example.com/job/" + i,
+      published_at: "2026-10-" + String(1 + (i % 20)).padStart(2, "0"),
+      fetched_at: new Date().toISOString(),
+    });
+  }
+  return rows;
+}
+
+/* ---------------------------- 载入 ---------------------------- */
+async function boot(){
+  // 1) 后端（MySQL）
+  try{
+    const r = await fetch("/api/jobs", {cache: "no-store"});
+    const data = await r.json().catch(() => null);
+    if (data && data.error){
+      toast("数据库读取失败：" + String(data.error).slice(0, 80));
+    }
+    if (r.ok && data && Array.isArray(data.rows)){
+      if (data.rows.length){
+        setRows(data.rows, "live", "MySQL · " + data.rows.length + " 条");
+      } else {
+        setRows([], "live", "MySQL · 还没有数据");
+      }
+      return;
+    }
+  }catch(e){ /* 静态打开时正常 */ }
+  // 2) 同目录 jobs.json
+  try{
+    const r = await fetch("jobs.json", {cache: "no-store"});
+    if (r.ok){
+      const data = await r.json();
+      const rows = Array.isArray(data) ? data : data.rows;
+      if (Array.isArray(rows) && rows.length){
+        setRows(rows, "live", "jobs.json · " + rows.length + " 条");
+        return;
+      }
+    }
+  }catch(e){ /* file:// 下会失败，忽略 */ }
+  // 3) 示例
+  setRows(demoRows(), "demo", "示例数据（未连到真实结果）");
+}
+
+function setRows(rows, source, text){
+  state.rows = rows.map(normalizeRow);
+  state.source = source;
+  state.page = 1;
+  $("sourceText").textContent = text;
+  $("sourceDot").className = "dot " + (source === "demo" ? "demo" : "live");
+  buildFilters();
+  apply();
+}
+
+function normalizeRow(r){
+  const o = {};
+  for (const f of FIELDS) o[f] = r[f] ?? "";
+  o.salary_min = num(r.salary_min);
+  o.salary_max = num(r.salary_max);
+  o.salary_months = num(r.salary_months);
+  o.raw = r.raw ?? null;
+  return o;
+}
+
+function buildFilters(){
+  const fill = (el, values, label) => {
+    const cur = el.value;
+    el.innerHTML = '<option value="">' + label + '</option>';
+    [...new Set(values.filter(Boolean))].sort().forEach(v => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v; el.appendChild(o);
+    });
+    el.value = [...el.options].some(o => o.value === cur) ? cur : "";
+  };
+  fill($("fCity"), state.rows.map(r => r.city), "全部城市");
+  fill($("fSite"), state.rows.map(r => r.site), "全部来源");
+  fill($("fExp"), state.rows.map(r => r.experience), "全部经验");
+}
+
+/* ---------------------------- 筛选 / 排序 ---------------------------- */
+function apply(){
+  const q = state.q.trim().toLowerCase();
+  state.view = state.rows.filter(r => {
+    if (state.city && r.city !== state.city) return false;
+    if (state.site && r.site !== state.site) return false;
+    if (state.exp && r.experience !== state.exp) return false;
+    if (state.minSalary > 0 && (r.salary_min ?? 0) < state.minSalary) return false;
+    if (q){
+      const hay = (r.title + " " + r.company + " " + r.skills + " " + r.city).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const k = state.sortKey, dir = state.sortDir;
+  state.view.sort((a, b) => {
+    let x = a[k], y = b[k];
+    if (k === "salary_min"){ x = x ?? -1; y = y ?? -1; }
+    if (typeof x === "number" && typeof y === "number") return (x - y) * dir;
+    return String(x ?? "").localeCompare(String(y ?? ""), "zh") * dir;
+  });
+  renderKpis(); renderCharts(); renderTable();
+}
+
+/* ---------------------------- 指标 ---------------------------- */
+function renderKpis(){
+  const rows = state.view;
+  $("kpiJobs").textContent = rows.length.toLocaleString();
+  $("kpiComps").textContent = new Set(rows.map(r => r.company).filter(Boolean)).size.toLocaleString();
+  $("kpiCities").textContent = new Set(rows.map(r => r.city).filter(Boolean)).size.toLocaleString();
+  const sal = rows.map(r => r.salary_min).filter(v => typeof v === "number" && v > 0).sort((a, b) => a - b);
+  $("kpiSalary").innerHTML = sal.length
+    ? Math.round(median(sal)) + '<small>K/月</small>'
+    : '—<small>K/月</small>';
+}
+function median(arr){ const m = Math.floor(arr.length / 2); return arr.length % 2 ? arr[m] : (arr[m - 1] + arr[m]) / 2; }
+
+/* ---------------------------- 图表 ---------------------------- */
+function renderCharts(){
+  const buckets = [[0,10,"<10K"],[10,15,"10-15K"],[15,20,"15-20K"],[20,30,"20-30K"],[30,50,"30-50K"],[50,999,"50K+"]];
+  const counts = buckets.map(([lo, hi]) => state.view.filter(r => typeof r.salary_min === "number" && r.salary_min >= lo && r.salary_min < hi).length);
+  bars($("chartSalary"), buckets.map(b => b[2]), counts);
+
+  const cityMap = {};
+  state.view.forEach(r => { if (r.city) cityMap[r.city] = (cityMap[r.city] || 0) + 1; });
+  const top = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  bars($("chartCity"), top.map(t => t[0]), top.map(t => t[1]), true);
+}
+function bars(host, labels, values, showLabelLeft){
+  const max = Math.max(1, ...values);
+  host.innerHTML = labels.map((lab, i) => {
+    const pct = Math.round(values[i] / max * 100);
+    return '<div class="bar-row"><span class="bar-label">' + esc(lab) + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<span class="bar-num">' + values[i] + '</span></div>';
+  }).join("") || '<div class="muted">当前筛选无数据</div>';
+}
+
+/* ---------------------------- 表格 ---------------------------- */
+function salaryText(r){
+  if (r.salary_raw) return r.salary_raw;
+  if (typeof r.salary_min === "number") return r.salary_min + "-" + (r.salary_max ?? "?") + "K";
+  return "—";
+}
+
+function renderTable(){
+  const total = state.view.length;
+  const pages = Math.max(1, Math.ceil(total / state.pageSize));
+  state.page = Math.min(state.page, pages);
+  const start = (state.page - 1) * state.pageSize;
+  const slice = state.view.slice(start, start + state.pageSize);
+
+  const tb = $("tbody");
+  tb.innerHTML = slice.map(r => {
+    const skills = String(r.skills || "").split(";").filter(Boolean).slice(0, 3)
+      .map(s => '<span class="tag">' + esc(s) + '</span>').join("");
+    return '<tr data-id="' + esc(r.site + "|" + r.job_id) + '">' +
+      '<td><div class="job-title">' + esc(r.title || "—") + '</div></td>' +
+      '<td>' + esc(r.company || "—") + '<div class="muted" style="font-size:12px">' + esc(r.district || "") + '</div></td>' +
+      '<td>' + esc(r.city || "—") + '</td>' +
+      '<td class="salary">' + esc(salaryText(r)) + '</td>' +
+      '<td class="muted">' + esc([r.experience, r.education].filter(Boolean).join(" / ") || "—") + '</td>' +
+      '<td>' + (skills || '<span class="muted">—</span>') + '</td>' +
+      '<td><span class="tag">' + esc(r.site || "—") + '</span></td>' +
+      '</tr>';
+  }).join("");
+
+  $("empty").hidden = total > 0;
+  if (!total){
+    const hint = state.rows.length === 0
+      ? (state.source === "live"
+          ? 'MySQL 里还没有数据。点上方「开始采集」，<br>或者先在终端跑 <code>python jobscraper.py login boss</code> 完成登录。'
+          : '现在看到的是示例数据。先跑 <code>python jobscraper.py login boss</code> 再回到这里点「开始采集」。')
+      : '放宽筛选条件试试。';
+    $("empty").innerHTML = '<b>没有匹配的职位</b>' + hint;
+  }
+  $("pagerInfo").textContent = total
+    ? '第 ' + state.page + ' / ' + pages + ' 页 · 共 ' + total + ' 条'
+    : '共 0 条';
+  if (state.activeId) {
+    const hit = [...tb.querySelectorAll("tr")].find(tr => tr.dataset.id === state.activeId);
+    if (hit) hit.classList.add("active");
+  }
+}
+
+/* ---------------------------- 详情 ---------------------------- */
+function openDetail(id){
+  const r = state.rows.find(x => x.site + "|" + x.job_id === id);
+  if (!r) return;
+  state.activeId = id;
+  $("dTitle").textContent = r.title || "—";
+  $("dCompany").textContent = [r.company, r.city, r.district].filter(Boolean).join(" · ") || "—";
+  const pairs = [
+    ["薪资", salaryText(r) + (r.salary_months ? " · " + r.salary_months + " 薪" : "")],
+    ["经验", r.experience || "—"],
+    ["学历", r.education || "—"],
+    ["技能", r.skills ? String(r.skills).split(";").join("、") : "—"],
+    ["来源", r.site || "—"],
+    ["发布", r.published_at || "—"],
+    ["采集", r.fetched_at || "—"],
+    ["链接", r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="color:var(--accent-2)">' + esc(r.url) + '</a>' : "—"],
+  ];
+  $("dKv").innerHTML = pairs.map(([k, v]) => '<dt>' + k + '</dt><dd>' + (k === "链接" ? v : esc(v)) + '</dd>').join("");
+  let raw = r.raw;
+  if (typeof raw === "string"){
+    try { raw = JSON.parse(raw); } catch(e){ /* 保持字符串 */ }
+  }
+  $("dRaw").textContent = raw ? JSON.stringify(raw, null, 2) : "（没有保存原始记录）";
+  $("drawer").classList.add("open");
+  document.querySelectorAll("tbody tr").forEach(tr => tr.classList.toggle("active", tr.dataset.id === id));
+}
+function closeDetail(){ $("drawer").classList.remove("open"); state.activeId = null; }
+
+/* ---------------------------- 导入 / 导出 ---------------------------- */
+function parseCSV(text){
+  const rows = []; let row = [], field = "", quoted = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (quoted){
+      if (c === '"' && text[i + 1] === '"'){ field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ","){ row.push(field); field = ""; }
+    else if (c === "\n"){ row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c !== "\r") field += c;
+  }
+  if (field || row.length){ row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const header = rows.shift().map(h => h.trim().replace(/^\ufeff/, ""));
+  return rows.filter(r => r.length > 1).map(r => {
+    const o = {}; header.forEach((h, i) => { o[h] = r[i] ?? ""; }); return o;
+  });
+}
+
+function importFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      let rows;
+      const text = String(reader.result);
+      if (/\.csv$/i.test(file.name)) rows = parseCSV(text);
+      else {
+        const data = JSON.parse(text);
+        rows = Array.isArray(data) ? data : data.rows;
+      }
+      if (!Array.isArray(rows) || !rows.length) throw new Error("没解析出记录");
+      setRows(rows, "live", file.name + " · " + rows.length + " 条");
+      toast("已导入 " + rows.length + " 条");
+    }catch(err){ toast("导入失败：" + err.message); }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+function exportView(){
+  if (!state.view.length){ toast("当前没有可导出的数据"); return; }
+  const cols = ["title","company","city","district","salary_raw","salary_min","salary_max",
+                "salary_months","experience","education","skills","site","url","published_at"];
+  const esc2 = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const csv = [cols.join(",")].concat(
+    state.view.map(r => cols.map(c => esc2(r[c])).join(","))
+  ).join("\n");
+  const blob = new Blob(["\ufeff" + csv], {type: "text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "jobs-filtered.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出 " + state.view.length + " 条");
+}
+
+/* ---------------------------- 事件绑定 ---------------------------- */
+$("q").addEventListener("input", (e) => { state.q = e.target.value; state.page = 1; apply(); });
+["fCity","fSite","fExp"].forEach(id => $(id).addEventListener("change", () => {
+  state.city = $("fCity").value; state.site = $("fSite").value; state.exp = $("fExp").value;
+  state.page = 1; apply();
+}));
+$("fSalary").addEventListener("input", (e) => {
+  state.minSalary = Number(e.target.value);
+  $("fSalaryVal").textContent = state.minSalary + "K";
+  state.page = 1; apply();
+});
+$("btnReset").addEventListener("click", () => {
+  state.q = ""; state.city = ""; state.site = ""; state.exp = ""; state.minSalary = 0; state.page = 1;
+  $("q").value = ""; $("fCity").value = ""; $("fSite").value = ""; $("fExp").value = ""; $("fSalary").value = 0;
+  $("fSalaryVal").textContent = "0K";
+  apply();
+});
+$("btnReload").addEventListener("click", boot);
+$("btnImport").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", (e) => { if (e.target.files[0]) importFile(e.target.files[0]); });
+$("btnExport").addEventListener("click", exportView);
+$("prev").addEventListener("click", () => { if (state.page > 1){ state.page--; renderTable(); } });
+$("next").addEventListener("click", () => {
+  const pages = Math.max(1, Math.ceil(state.view.length / state.pageSize));
+  if (state.page < pages){ state.page++; renderTable(); }
+});
+$("dClose").addEventListener("click", closeDetail);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDetail(); });
+
+document.querySelectorAll("thead th[data-key]").forEach(th => {
+  th.addEventListener("click", () => {
+    const k = th.dataset.key;
+    if (state.sortKey === k) state.sortDir *= -1;
+    else { state.sortKey = k; state.sortDir = k === "salary_min" ? -1 : 1; }
+    apply();
+  });
+});
+
+$("tbody").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-id]");
+  if (tr) openDetail(tr.dataset.id);
+});
+
+["dragenter","dragover"].forEach(ev => document.addEventListener(ev, (e) => {
+  e.preventDefault(); $("drop").classList.add("on");
+}));
+["dragleave","drop"].forEach(ev => document.addEventListener(ev, (e) => {
+  if (ev === "drop" || e.target === document.documentElement) $("drop").classList.remove("on");
+}));
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) importFile(f);
+});
+
+/* ---------------------------- 触发采集 ---------------------------- */
+const run = { timer: null, armed: false };
+
+async function startScrape(){
+  const keyword = $("rKeyword").value.trim();
+  if (!keyword){ toast("先填关键词"); return; }
+  const body = {
+    site: $("rSite").value,
+    keyword: keyword,
+    city: $("rCity").value,
+    pages: Number($("rPages").value) || 3,
+  };
+  $("btnRun").disabled = true;
+  try{
+    const r = await fetch("/api/scrape", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) throw new Error(data.error || data.message || ("HTTP " + r.status));
+    run.armed = true;
+    $("runLog").hidden = false;
+    $("runLog").textContent = "";
+    toast("采集任务已启动");
+    pollStatus();
+  }catch(err){
+    $("btnRun").disabled = false;
+    toast("启动失败：" + err.message);
+  }
+}
+
+function pollStatus(){
+  clearInterval(run.timer);
+  refreshStatus();
+  run.timer = setInterval(refreshStatus, 1500);
+}
+
+async function refreshStatus(){
+  let s;
+  try{
+    const r = await fetch("/api/status", {cache: "no-store"});
+    s = await r.json();
+  }catch(e){ return; }
+
+  const logEl = $("runLog");
+  if (s.log && s.log.length){
+    logEl.hidden = false;
+    logEl.textContent = s.log.join("\n");
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  const badge = $("runState");
+  const justEnded = s.ended ? (Date.now() / 1000 - s.ended) < 300 : false;
+
+  if (s.running){
+    run.armed = true;
+    badge.textContent = "采集中 " + (s.elapsed ?? 0) + "s";
+    badge.className = "run-state on";
+    $("btnRun").disabled = true;
+    if (!run.timer) run.timer = setInterval(refreshStatus, 1500);
+    return;
+  }
+
+  $("btnRun").disabled = false;
+  if (run.armed){
+    run.armed = false;
+    clearInterval(run.timer); run.timer = null;
+    badge.textContent = s.exit === 0 ? "完成" : ("失败 · 退出码 " + s.exit);
+    badge.className = "run-state" + (s.exit === 0 ? " ok" : "");
+    if (s.exit === 0){ toast("采集完成，刷新数据"); boot(); }
+  } else if (justEnded){
+    badge.textContent = s.exit === 0 ? "完成" : ("失败 · 退出码 " + s.exit);
+    badge.className = "run-state" + (s.exit === 0 ? " ok" : "");
+  } else {
+    badge.textContent = "空闲";
+    badge.className = "run-state";
+  }
+}
+
+$("btnRun").addEventListener("click", startScrape);
+
+boot();
+refreshStatus();
+</script>
+</body>
+</html>

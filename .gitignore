@@ -1,0 +1,59 @@
+# Secrets & local config
+**/db.conf
+.env
+.env.*
+!.env.example
+!**/*.example
+
+# Python
+.venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+
+# Runtime / personal data
+documents/cv/
+documents/linkedin/
+documents/diplomas/
+documents/references/
+documents/projects/
+documents/applications/
+documents/postings/
+webapp/logs/
+*.log
+
+# Browser / scraper state (cookies, profiles)
+jobscraper/state/
+jobscraper/captures/
+jobscraper/.browsers/
+jobscraper/.tmp/
+jobscraper/jobs.csv
+chrometest_probe/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.impeccable/
+
+# LaTeX build
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+cv/*.pdf
+cover_letters/*.pdf
+
+# Misc
+dashboard.png
+serve.out.log
+serve.err.log

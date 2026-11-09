@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HireDesk · 求职工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234cc38a'/%3E%3Ctext x='16' y='22' font-size='15' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='%2306231a'%3EAI%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">AI</div>
+    <div>
+      <h1>求职工作台</h1>
+      <div class="sub">HireDesk · 本地 MySQL · 国内岗位采集</div>
+    </div>
+  </div>
+  <div class="status">
+    <span class="badge" id="badgeDb"><i class="dot"></i><span>MySQL</span></span>
+    <span class="badge" id="badgeUpstream"><i class="dot"></i><span>采集引擎</span></span>
+    <button class="btn ghost" id="btnRefresh" title="重新加载数据">刷新</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-view="overview">概览</button>
+  <button class="tab" data-view="collect">采集中心</button>
+  <button class="tab" data-view="jobs">岗位池</button>
+  <button class="tab" data-view="studio">简历工坊</button>
+  <button class="tab" data-view="applications">申请追踪</button>
+  <button class="tab" data-view="profile">我的画像</button>
+</nav>
+
+<main id="main">
+  <!-- 概览 -->
+  <section class="view active" id="view-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card">
+        <h2>薪资区间分布</h2>
+        <div id="salaryChart" class="barchart"></div>
+      </div>
+      <div class="card">
+        <h2>城市 Top 8</h2>
+        <div id="cityChart" class="barchart"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>匹配度分布</h2>
+        <div id="fitChart" class="fitlist"></div>
+      </div>
+      <div class="card">
+        <h2>最近入库</h2>
+        <div id="recentList" class="recent"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 岗位池 -->
+  <section class="view" id="view-jobs">
+    <div class="card">
+      <div class="filters">
+        <input type="search" id="fQ" placeholder="搜索职位 / 公司 / 技能…" />
+        <select id="fCity"><option value="">全部城市</option></select>
+        <select id="fSite"><option value="">全部站点</option></select>
+        <select id="fFit">
+          <option value="">全部匹配度</option>
+          <option value="high">高匹配</option>
+          <option value="medium">中匹配</option>
+          <option value="low">低匹配</option>
+        </select>
+        <select id="fStatus">
+          <option value="">全部状态</option>
+          <option value="new">待处理</option>
+          <option value="want">想投递</option>
+          <option value="applied">已投递</option>
+          <option value="skipped">已跳过</option>
+          <option value="expired">已过期</option>
+        </select>
+        <select id="fSort">
+          <option value="score">按匹配分</option>
+          <option value="new">按入库时间</option>
+          <option value="salary">按薪资</option>
+          <option value="company">按公司</option>
+        </select>
+        <button class="btn primary" id="btnRescoreAll" title="按当前画像重算全部岗位分数">重算全部</button>
+        <button class="btn" id="btnFetchDetail" title="补齐岗位职责 / 公司介绍 / 公司地点">补全详情</button>
+        <button class="btn" id="btnMergeJobs" title="同一公司+同一职位在不同站点的合并为一条">合并同岗</button>
+        <button class="btn danger" id="btnBatchDelete" disabled title="先勾选左侧复选框">删除选中</button>
+        <button class="btn" id="btnCleanup" title="删除已跳过和已过期的岗位">清理已跳过/过期</button>
+      </div>
+      <div class="tablewrap">
+        <table class="jobs">
+          <thead>
+            <tr>
+              <th class="c-check"><input type="checkbox" id="checkAll" title="全选本页" /></th>
+              <th class="c-title">职位</th><th>来源</th><th>公司</th><th>城市</th><th>薪资</th>
+              <th>经验</th><th class="c-score">匹配</th><th>状态</th>
+            </tr>
+          </thead>
+          <tbody id="jobsBody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span id="jobsCount" class="muted"></span>
+        <div>
+          <button class="btn ghost" id="btnPrev">上一页</button>
+          <button class="btn ghost" id="btnNext">下一页</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 简历工坊 -->
+  <section class="view" id="view-studio">
+    <div class="card">
+      <h2>① 选择 JD 与简历</h2>
+      <p class="hint">
+        按岗位重写简历，只基于真实经历：引擎来自 <code>W-SING-HUNG/dsh-resume</code>，
+        改写后自动跑确定性校验（数字/机构名/技术专名/职责升格/整条新增）。
+        <span id="rPlugin"></span>
+      </p>
+      <div class="form-row">
+        <label>从岗位池选 JD
+          <select id="rJob"><option value="">— 手动填写 —</option></select>
+        </label>
+        <label>已上传的简历
+          <select id="rDoc"><option value="">— 手动填写 —</option></select>
+        </label>
+        <label>改写引擎
+          <select id="rEngine">
+            <option value="auto">自动（配了 LLM 就用）</option>
+            <option value="llm">强制 LLM 改写</option>
+            <option value="local">本地重排（不调 LLM）</option>
+          </select>
+        </label>
+      </div>
+      <div class="two-col">
+        <label>JD 原文
+          <textarea id="rJd" rows="10" placeholder="把岗位描述贴在这里，或上面选一个岗位池里的岗位"></textarea>
+        </label>
+        <label>简历原文
+          <textarea id="rResume" rows="10" placeholder="粘贴简历，或上面选一个已上传的文件"></textarea>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnRewrite">生成改写</button>
+        <span class="muted" id="rStatus"></span>
+      </div>
+    </div>
+
+    <div class="card" id="rResultCard" style="display:none">
+      <div class="actions spread" style="margin-bottom:12px">
+        <h2 style="margin:0">② 结果</h2>
+        <div class="actions">
+          <button class="btn" id="btnCopyResume">复制简历</button>
+          <button class="btn primary" id="btnExportDocx">下载 .docx</button>
+        </div>
+      </div>
+      <div id="rResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="actions spread" style="margin-bottom:10px">
+        <h2 style="margin:0">历史版本</h2>
+        <span class="muted">每次生成自动存一版，点任意一条可重新载入</span>
+      </div>
+      <div id="rHistory" class="runs"></div>
+    </div>
+  </section>
+
+  <!-- 采集中心 -->
+  <section class="view" id="view-collect">
+    <div class="grid2 wide-left">
+      <div class="card">
+        <h2>发起国内岗位采集</h2>
+        <p class="hint">
+          内置采集引擎：直接拉起 <code id="engineScript">jobscraper.py</code>（Scrapling + 已登录 Chrome）。
+          抓到结果落在同一个 MySQL 库，采完自动导入岗位池并算分。
+        </p>
+        <div class="form-row">
+          <label>站点
+            <select id="cSite">
+              <option value="boss">BOSS 直聘</option>
+              <option value="liepin">猎聘</option>
+              <option value="51job">前程无忧</option>
+              <option value="zhilian">智联招聘</option>
+            </select>
+          </label>
+          <label>关键词
+            <input id="cKeyword" list="cKeywordList"
+                   placeholder="可填多个，用逗号分隔：IT经理,信息主管" />
+            <datalist id="cKeywordList"></datalist>
+          </label>
+          <label>城市
+            <input id="cCity" list="cCityList" placeholder="取自画像·所在城市" />
+            <datalist id="cCityList"></datalist>
+          </label>
+          <label>页数
+            <input id="cPages" type="number" min="1" max="20" value="3" />
+          </label>
+        </div>
+        <div class="chips" id="cKeywordChips"></div>
+        <p class="hint" id="collectHint">关键词与城市默认取自画像</p>
+        <div class="actions">
+          <button class="btn primary" id="btnScrape">采集当前站点</button>
+          <button class="btn primary" id="btnPlan" title="四个平台 × 全部关键词，一条命令跑完">一键采集（4 平台）</button>
+          <button class="btn" id="btnScrapeCancel" type="button" disabled>终止</button>
+          <button class="btn" id="btnImport">同步已有岗位</button>
+          <button class="btn ghost" id="btnCollectReset" title="重新套用画像里的关键词与城市">恢复画像默认</button>
+          <label class="chk" title="默认会更新上游字段但保留你的状态；勾选后强制覆盖并重置为待处理">
+            <input type="checkbox" id="cRefresh" /> 强制覆盖（重置状态）
+          </label>
+          <label class="chk" title="采集完成后自动逐个打开详情页补全岗位职责、公司介绍、公司地点（会弹出浏览器窗口）">
+            <input type="checkbox" id="cAutoDetail" checked /> 顺带补全详情
+          </label>
+        </div>
+        <div class="logline" id="scrapeState">空闲</div>
+        <pre class="log" id="scrapeLog">（还没有采集任务）</pre>
+      </div>
+      <div class="card">
+        <h2>采集记录</h2>
+        <div id="runsList" class="runs"></div>
+      </div>
+    </div>
+
+    <div class="card" id="loginCard">
+      <div class="actions spread" style="margin-bottom:8px">
+        <h2 style="margin:0">登录态（抓取前需要）</h2>
+        <span class="muted">点「登录」打开 Chrome，扫码成功后会自动保存并关闭窗口</span>
+      </div>
+      <div id="loginSites" class="docs"></div>
+      <div class="actions" style="margin-top:10px">
+        <label class="chk">等待
+          <input id="loginWait" type="number" min="30" max="300" value="120" />
+          秒
+        </label>
+        <button class="btn" id="btnLoginCancel" type="button" disabled>取消登录</button>
+        <button class="btn ghost" id="btnLoginRefresh" type="button">刷新状态</button>
+        <span class="muted" id="loginStatus"></span>
+      </div>
+      <pre class="log" id="loginLog" style="height:150px;display:none"></pre>
+    </div>
+  </section>
+
+  <!-- 申请追踪 -->
+  <section class="view" id="view-applications">
+    <div class="card">
+      <div class="actions spread">
+        <div id="appStats" class="chips"></div>
+        <button class="btn primary" id="btnAddApp">新增申请</button>
+      </div>
+      <div class="tablewrap">
+        <table class="apps">
+          <thead>
+            <tr>
+              <th>日期</th><th>公司</th><th>职位</th><th>渠道</th>
+              <th>状态</th><th>反馈</th><th>备注</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="appsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 画像 -->
+  <section class="view" id="view-profile">
+    <div class="card">
+      <h2>简历 / 档案文件 → 自动生成画像</h2>
+      <p class="hint">
+        对应原项目 <code>/setup</code>：上传简历、LinkedIn 导出、学历或在职证明等，系统抽取文本并生成候选人档案。
+        原文件按框架约定存到 <code>documents/&lt;分类&gt;/</code>，文本与分析结果落 MySQL。
+        分析引擎：<span id="engineHint">本地规则解析</span>
+      </p>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" multiple hidden accept=".pdf,.docx,.txt,.md,.tex,.csv" />
+        <div class="dz-main">把文件拖到这里，或 <button class="btn" id="btnPick" type="button">选择文件</button></div>
+        <div class="dz-sub">
+          分类
+          <select id="docCategory">
+            <option value="cv">简历 CV</option>
+            <option value="linkedin">LinkedIn 导出</option>
+            <option value="diplomas">学历/学位</option>
+            <option value="references">推荐信</option>
+            <option value="projects">项目材料</option>
+            <option value="other">其他</option>
+          </select>
+          <span class="muted">支持 PDF / DOCX / TXT / MD / TEX，单个 ≤ 12MB</span>
+        </div>
+      </div>
+      <div id="docList" class="docs"></div>
+      <div id="docResult"></div>
+
+      <details class="llmset">
+        <summary>分析引擎设置（可选：接入 LLM 提升抽取与改写质量）</summary>
+        <div class="form-row" style="margin-top:10px">
+          <label>常用服务（选一个自动填地址）
+            <select id="llmPreset">
+              <option value="">— 自定义 —</option>
+              <option value="https://api.deepseek.com|deepseek-chat">DeepSeek 官方</option>
+              <option value="https://dashscope.aliyuncs.com/compatible-mode/v1|qwen-plus">阿里百炼（通义千问）</option>
+              <option value="https://api.moonshot.cn/v1|kimi-k2-0905-preview">月之暗面 Kimi</option>
+              <option value="https://open.bigmodel.cn/api/paas/v4|glm-4-plus">智谱 GLM</option>
+              <option value="https://api.siliconflow.cn/v1|deepseek-ai/DeepSeek-V3">硅基流动</option>
+              <option value="http://127.0.0.1:11434/v1|qwen2.5:7b">本地 Ollama</option>
+            </select>
+          </label>
+          <label>Base URL<input id="llmBase" placeholder="https://api.deepseek.com" /></label>
+          <label>API Key<input id="llmKey" type="password" placeholder="留空则沿用已保存的" /></label>
+          <label>模型
+            <div class="combo" id="llmModelCombo">
+              <input id="llmModel" placeholder="点这里自动列出可选模型" autocomplete="off" />
+              <div class="combo-panel" id="llmModelPanel" hidden></div>
+            </div>
+          </label>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnTestLlm" type="button">测试连接</button>
+          <button class="btn primary" id="btnSaveLlm" type="button">保存设置</button>
+          <label class="chk" title="推理型模型默认会先思考再回答，关掉更快、更省 token">
+            <input type="checkbox" id="llmNoThink" checked /> 关闭模型思考
+          </label>
+          <span class="muted" id="llmProbe"></span>
+        </div>
+        <div class="muted" id="llmStatus" style="margin-top:8px">未配置时使用本地规则解析，离线可用。</div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>候选人画像</h2>
+      <p class="hint">这些字段对应候选人画像（技能 / 目标岗位 / 城市等），
+        保存在 MySQL 的 <code>aijs_profile</code> 表，是匹配度打分的依据。保存后会自动重算岗位池分数。</p>
+      <div class="form-grid">
+        <label>姓名<input id="pName" placeholder="张三" /></label>
+        <label>所在城市<input id="pLocation" placeholder="北京" /></label>
+        <label>工作年限<input id="pYears" type="number" step="0.5" min="0" placeholder="3" /></label>
+        <label>学历
+          <select id="pEdu">
+            <option value="">未填</option><option>大专</option><option>本科</option>
+            <option>硕士</option><option>博士</option>
+          </select>
+        </label>
+        <label>期望月薪（K）<input id="pSalary" type="number" step="0.5" min="0" placeholder="20" /></label>
+        <label>期望城市<input id="pCities" placeholder="北京,上海" /></label>
+        <label class="span2">目标岗位<input id="pRoles" placeholder="Python 后端,数据工程师" /></label>
+        <label class="span2">核心技能（逗号分隔）<input id="pPrimary" placeholder="Python,MySQL,FastAPI" /></label>
+        <label class="span2">次要技能<input id="pSecondary" placeholder="Docker,Redis" /></label>
+        <label class="span2">行业/领域<input id="pDomain" placeholder="互联网,金融科技" /></label>
+        <label class="span2">工具<input id="pTools" placeholder="Git,Linux" /></label>
+        <label class="span2">红线（命中直接判低匹配）
+          <input id="pBreakers" placeholder="外包,996,驻场" /></label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnSaveProfile">保存画像</button>
+        <span class="muted" id="profileSaved"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 详情抽屉 -->
+<div class="drawer-mask" id="drawerMask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <h2 id="dTitle">—</h2>
+      <div class="muted" id="dCompany"></div>
+    </div>
+    <button class="btn ghost" id="dClose">关闭</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+  <div class="drawer-foot" id="dFoot"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>

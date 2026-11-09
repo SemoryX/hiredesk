@@ -1,0 +1,33 @@
+HireDesk — third-party notices
+================================
+
+This project is an independent local job-search workbench. It is not affiliated
+with, endorsed by, or maintained by Anthropic, Claude Code, or the upstream
+ai-job-search project maintainers.
+
+1) ai-job-search (methodology / template heritage)
+   Project: https://github.com/MadsLorentzen/ai-job-search
+   License: MIT — Copyright (c) 2026 Mads Lorentzen
+   Use: scoring dimensions and application-workflow ideas informed the webapp;
+        stock LaTeX templates and some tools/ helpers may still appear in-tree.
+   The original README / branding / personal career narrative of that project
+   are not claimed as HireDesk's own.
+
+2) dsh-resume (optional resume rewrite engine)
+   Project: typically https://github.com/W-SING-HUNG/dsh-resume (or local checkout)
+   License: MIT — Copyright (c) 2026 dsh-resume contributors
+   Use: loaded at runtime via webapp/jsbridge when RESUME_PLUGIN_DIR is set;
+        HireDesk does not vendor the plugin source by default.
+
+3) pypdf (vendored under webapp/vendor/)
+   License: BSD-3-Clause — see webapp/vendor/pypdf-*.dist-info/licenses/LICENSE
+   Use: PDF text extraction for resume upload.
+
+4) Scrapling / Playwright / Patchright (jobscraper runtime dependencies)
+   Installed via jobscraper/requirements.txt; follow each package's own license.
+   Use: logged-in browser automation against public job boards.
+
+5) Job board sites (BOSS / 猎聘 / 前程无忧 / 智联等)
+   Scraping with a personal logged-in browser profile may conflict with a site's
+   Terms of Service. HireDesk is intended for personal / small-circle use.
+   Operators are responsible for complying with applicable terms and laws.
